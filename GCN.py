@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 
-import tensorflow as tf
+import tensorflow as tf 
 from tensorflow.contrib.layers import xavier_initializer
 
 from utils import load_data
@@ -23,7 +23,7 @@ num_features = features.shape[1]
 num_classes = y_train.shape[1]
 
 # Hyperparameters
-num_epochs = 5000
+num_epochs = 50
 hidden_units = 1024
 
 # preprocessing, compute A
@@ -67,7 +67,7 @@ with tf.Session() as sess:
     for epoch in range(num_epochs):
         _, loss_, accuracy_ = sess.run([optimizer, loss, accuracy], 
                 feed_dict = {X: np.array(features.todense()), y:y_train, mask: train_mask})
-        if epoch % 20 == 0:
+        if epoch % 1 == 0:
             print("Epoch:{:3d}\tLoss: {:.5f}\tAcc: {:.3f}".format(epoch, loss_, accuracy_[0]))
 
             val_accuracy_ = sess.run(accuracy, 
@@ -77,5 +77,5 @@ with tf.Session() as sess:
 
     test_accuracy_ = sess.run(accuracy, 
             feed_dict = {X: np.array(features.todense()), y:y_test, mask: test_mask})
-    print("Validation accuracy: {:.3f}".format(test_accuracy_[0]))
+    print("Test accuracy: {:.3f}".format(test_accuracy_[0]))
 

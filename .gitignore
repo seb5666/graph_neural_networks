@@ -1,2 +1,4 @@
 gcn/
 __pycache__/
+
+.idea/**

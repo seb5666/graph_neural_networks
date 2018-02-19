@@ -2,3 +2,6 @@ gcn/
 __pycache__/
 
 .idea/**
+.ipynb_checkpoints/**
+.texpadtmp/**
+

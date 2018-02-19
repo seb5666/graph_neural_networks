@@ -5,9 +5,6 @@ import tensorflow as tf
 
 from utils import load_data
 
-np.set_printoptions(precision=2)
-
-
 def GAT_layer(scope, features, A, F_out,  K=1, activation=tf.nn.relu, reduction="concat", dropout_p=0.5):
 
     N = features.get_shape()[0]
@@ -63,7 +60,11 @@ def GAT_layer(scope, features, A, F_out,  K=1, activation=tf.nn.relu, reduction=
 def accuracy(probabilities, y, mask):
     predictions = np.argmax(probabilities, axis=-1)
     predictions = predictions[mask]
-    labels = y[mask]
+    print(predictions.shape)
+    print(predictions[:10])
+    labels = np.argmax(y[mask], axis=-1)
+    print(labels.shape)
+    print(labels[:10])
     print("Num examples: {}".format(len(np.argwhere(mask == True))))
     accuracy = len(np.argwhere(predictions == labels)) / len(np.argwhere(mask == True))
     return accuracy
@@ -85,12 +86,13 @@ def GAT_model(X, y, mask, l2_coef = 0.0005):
     return probabilities, loss, train_op
 
 if __name__ == "__main__":
-
     adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data('cora')
     num_nodes = adj.shape[0]
     num_features = features.shape[1]
     num_classes = y_train.shape[1]
 
+    print(y_train.shape)
+    print(train_mask.shape)
     print("Total number of nodes: {}".format(adj.shape[0]))
     print("Training nodes: {}".format(len(np.argwhere(y_train == True))))
     print("Validation nodes: {}".format(len(np.argwhere(y_val == True))))
@@ -116,7 +118,7 @@ if __name__ == "__main__":
 
         for epoch in range(num_epochs):
             probabilities_, loss_, train_op_ = sess.run([probabilities, loss, train_op], { X: features })
-            print("Epoch: {}: Loss: {}, Train accuracy: {}".format(epoch, loss_, accuracy(probabilities_, y_test, test_mask)))
+            print("Epoch: {}: Loss: {}, Train accuracy: {}".format(epoch, loss_, accuracy(probabilities_, y_train, train_mask)))
             print("Validation accuracy: {}".format(accuracy(probabilities_, y_val, val_mask)))
             print(probabilities.shape)
 

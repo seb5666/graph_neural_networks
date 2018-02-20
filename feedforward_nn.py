@@ -66,7 +66,7 @@ y_test = y_test[test_mask]
 batch_sizes = [32, 64, 128, 256, num_nodes]
 num_epochs = [50, 100, 200, 400]
 ps = [0.0, 0.1, 0.2, 0.4, 0.6]
-reg_weights = [0.05]
+reg_weights = [0.05, 0.005, 0.001, 0.0001]
 
 
 best_params = None

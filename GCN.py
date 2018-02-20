@@ -27,6 +27,7 @@ num_classes = y_train.shape[1]
 num_epochs = 200
 hidden_units = 16
 initializer = glorot_uniform_initializer
+regularization_weight = 5e-4
 dropout = 0.5
 print_info_every = 20
 
@@ -71,7 +72,9 @@ Z_0_dropped = tf.nn.dropout(Z_0, keep_prob = 1-dropout_rate)
 logits = tf.matmul(tf.matmul(A_hat, Z_0_dropped), W_1, name="logits")
 Z = tf.nn.softmax(logits=logits, name="probabilities")
 
-loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=tf.boolean_mask(logits, mask), labels=tf.boolean_mask(y, mask)))
+reg_loss = tf.nn.l2_loss(W_0)
+sup_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=tf.boolean_mask(logits, mask), labels=tf.boolean_mask(y, mask)))
+loss = sup_loss + regularization_weight * reg_loss
 
 predictions = tf.boolean_mask(tf.argmax(Z, axis=-1), mask)
 labels = tf.boolean_mask(tf.argmax(y, axis=-1), mask)
@@ -108,22 +111,22 @@ with tf.Session() as sess:
 
     print(embeddings.shape)
 
-    tsne = TSNE()
-    low_space_X = tsne.fit_transform(embeddings, None)
-
-    def plot_scatter(mask, y, name):
-        Xs = low_space_X[mask][:, 0]
-        ys = low_space_X[mask][:, 1]
-        colors = np.argmax(y[mask], axis=-1)
-        plt.figure()
-        plt.xticks([])
-        plt.yticks([])
-        plt.scatter(Xs, ys, c=colors, linewidths=0.5)
-        plt.title(name)
-        plt.savefig("./figs/gcn/{}_tsne.png".format(name), bbox_inches='tight')
-
-    plot_scatter(train_mask, y_train, "train")
-    plot_scatter(val_mask, y_val, "val")
-    plot_scatter(test_mask, y_test, "test")
-    plt.show()
+    # tsne = TSNE()
+    # low_space_X = tsne.fit_transform(embeddings, None)
+    #
+    # def plot_scatter(mask, y, name):
+    #     Xs = low_space_X[mask][:, 0]
+    #     ys = low_space_X[mask][:, 1]
+    #     colors = np.argmax(y[mask], axis=-1)
+    #     plt.figure()
+    #     plt.xticks([])
+    #     plt.yticks([])
+    #     plt.scatter(Xs, ys, c=colors, linewidths=0.5)
+    #     plt.title(name)
+    #     plt.savefig("./figs/gcn/{}_tsne.png".format(name), bbox_inches='tight')
+    #
+    # plot_scatter(train_mask, y_train, "train")
+    # plot_scatter(val_mask, y_val, "val")
+    # plot_scatter(test_mask, y_test, "test")
+    # plt.show()
 

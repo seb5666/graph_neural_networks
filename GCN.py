@@ -111,22 +111,22 @@ with tf.Session() as sess:
 
     print(embeddings.shape)
 
-    # tsne = TSNE()
-    # low_space_X = tsne.fit_transform(embeddings, None)
-    #
-    # def plot_scatter(mask, y, name):
-    #     Xs = low_space_X[mask][:, 0]
-    #     ys = low_space_X[mask][:, 1]
-    #     colors = np.argmax(y[mask], axis=-1)
-    #     plt.figure()
-    #     plt.xticks([])
-    #     plt.yticks([])
-    #     plt.scatter(Xs, ys, c=colors, linewidths=0.5)
-    #     plt.title(name)
-    #     plt.savefig("./figs/gcn/{}_tsne.png".format(name), bbox_inches='tight')
-    #
-    # plot_scatter(train_mask, y_train, "train")
-    # plot_scatter(val_mask, y_val, "val")
-    # plot_scatter(test_mask, y_test, "test")
-    # plt.show()
+    tsne = TSNE()
+    low_space_X = tsne.fit_transform(embeddings, None)
+
+    def plot_scatter(mask, y, name):
+        Xs = low_space_X[mask][:, 0]
+        ys = low_space_X[mask][:, 1]
+        colors = np.argmax(y[mask], axis=-1)
+        plt.figure()
+        plt.xticks([])
+        plt.yticks([])
+        plt.scatter(Xs, ys, c=colors, linewidths=0.5)
+        plt.title(name)
+        plt.savefig("./figs/gcn/{}_tsne.png".format(name), bbox_inches='tight')
+
+    plot_scatter(train_mask, y_train, "train")
+    plot_scatter(val_mask, y_val, "val")
+    plot_scatter(test_mask, y_test, "test")
+    plt.show()
 

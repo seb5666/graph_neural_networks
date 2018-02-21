@@ -7,6 +7,7 @@ from utils import load_data
 
 from sklearn.manifold import TSNE
 from matplotlib import pyplot as plt
+plt.style.use('ggplot')
 
 np.set_printoptions(precision=2)
 
@@ -170,9 +171,9 @@ if __name__ == "__main__":
                 axes.set_yticks([])
                 axes.scatter(Xs, ys, c=colors, linewidths=0.5)
 
-            fig = plt.figure(figsize=(16, 4))
-            fig.suptitle("t-SNE visualisation of 1st layer embeddings")
-            
+            fig = plt.figure(figsize=(14, 4))
+            fig.suptitle("t-SNE visualisation of the first layer activations of the GAT")
+
             ax1 = fig.add_subplot(1,3,1)
             ax1.set_title("Training nodes")
             plot_scatter(ax1, train_mask, y_train, "train")

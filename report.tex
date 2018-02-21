@@ -117,7 +117,8 @@ During training the cross-entropy loss
 is minimised over all labeled examples $\textbf{y}_L$ using gradient descent. As the entire dataset fits in memory, we can use a single batch containing the entire network. Furthermore, dropout \cite{srivastava2014dropout} is added to the input features and to the output of the first layer.
 
 \subsection{Graph Attention Networks}
-Next, I implemented the Graph Attention Networks (GAT) algorithm presented by Veli{\v{c}}kovi{\'{c}} et al.\ \cite{velickovic2018graph}. Attention mechanism have become widely popular and have achieved state-of-the-art results in sequence-based tasks, see for example Bahdanau et al.\ (2014) \cite{bahdanau2014neural} or Vaswani et al.\ (2017) \cite{vaswani2017attention} as they have the advantage of giving the neural network the ability to learn on which part of the input to focus. More specifically, in the GAT case we talk about self-attention because the attention mechanism is used to compute a representation of a single sequence. The main idea behind the algorithm is to compute a hidden representation (also called an \textbf{embedding}) for each node in the graph by attending over all its neighbours using self-attention. That is, the network computes an embedding for each node using the nodes in its neighbourhood and by choosing how much attention to pay to each node in the neighbourhood using the self-attention mechanism.
+Next, I implemented the Graph Attention Networks (GAT) algorithm presented by Veli{\v{c}}kovi{\'{c}} et al.\ \cite{velickovic2018graph}. Attention mechanism have become widely popular and have achieved state-of-the-art results in sequence-based tasks, see for example Bahdanau et al.\ (2014) \cite{bahdanau2014neural} or Vaswani et al.\ (2017) \cite{vaswani2017attention} as they have the advantage of giving the neural network the ability to learn on which part of the input to focus. More specifically, in the GAT case we talk about self-attention because the attention mechanism is used to compute a representation of a single sequence. The main idea behind the algorithm is to compute a hidden representation (also called an \textbf{embedding}) for each node in the graph by attending over all its neighbours using self-attention. That is, the network computes an embedding for each node using the nodes in its neighbourhood and by choosing how much attention to pay to each individual neighbour using the self-attention mechanism.
+
 \bigskip
 
 The GAT architecture is best described in terms of its layers, called \textbf{graph attention layers}. In each layer, the input features $\textbf{X}$ are first linearly transformed into $\textbf{X}' = \textbf{X}\textbf{W}$ where $W$ is a $\textrm{F} \times \textrm{F}'$ weight matrix. Thus each node feature vector $h_i = X_i$ is linearly transformed to a feature vector $h'_i = X'_i = h_i \textbf{W}$ of length $F'$. Then, self-attention is performed on the nodes by applying a shared attentional mechanism defined as a function $a: \mathbb{R}^{F'} \times \mathbb{R}^{F'} \to \mathbb{R}$. This function maps two transformed input feature vectors to a real attention coefficient:
@@ -181,15 +182,14 @@ Again, to cope with the small amount of training data, L2 regularisation is appl
 
 \begin{table}[h]
 \centering	
-\begin{tabular}{ |c|c|c|c|c| } 
+\begin{tabular}{ |c c|c c|c|c|c| } 
  \hline
- \multicolumn{2}{|c|}{SVM on node features} & \multicolumn{2}{|c|}{SVM on averaged features} & features average MLP \\
+ \multicolumn{2}{|c|}{SVM on node features} & \multicolumn{2}{|c|}{SVM on averaged features} & features average MLP & GCN & GAT\\
+ linear kernel & rbf kernel & linear kernel & rbf kernel & linear kernel & &\\
  \hline
- linear kernel & rbf kernel & linear kernel & rbf kernel & linear kernel \\
  \hline
- \hline
- 0.558 &  0.566 & 0.714 & 0.716 & cell3 \\ 
- 0.583 &  0.576 & 0.728 & 0.733 & cell3 \\ 
+ 0.558 &  0.566 & 0.714 & 0.716 & 0.762 & 0.785 & 0.769\\ 
+ 0.583 &  0.576 & 0.728 & 0.733 & 0.769 & 0.802 & 0.994\\ 
  \hline
 \end{tabular}
 \caption{Validation accuracy and test accuracy obtained on the different models.}
@@ -231,8 +231,30 @@ A simple way of incorporating knowledge about the graph structure is to represen
 
 This is a significant improvement over the accuracy obtain with the SVM trained on the features of each node individually. This shows that incorporating knowledge about the graph structure does indeed improve the classification accuracy significantly even when incorporated only in a very simplistic way, i.e.\ by only considering the direct neighbours and averaging their features.
 
-\subsection{TODO: use t-SNE to visualise features}
+\subsection{Graph Convolution Network}
+For this model I used the hyper-parameters presented by the authors which were obtained by optimising the validation accuracy on the set of 500 validation nodes. The model is trained over 200 epochs using the Adam optimiser \cite{kingma2014adam}. The optimal learning rate was found to be 0.01 The weights are initialised using a Glorot initialization \cite{glorot2010understanding}. Furthermore, the input feature vectors are row-normalized. The dropout rate was set to 0.5, the L2 regularisation weight to 0.0005 and the number of hidden inuts was set to 16. Using my implementation of this algorithm in TensforFlow, and averaging the result of 10 runs, I obtain an accuracy of 78.5\% on the validation data and 80.3\% on the test data.
 
+This is again an improvement over the average MLP which could be explained by different reasons. First, the graph structure is incorporated in a more principled way, using the adjacency matrix and the degree matrix of the network. Second, as the network consists of two layers, it has the ability to incorporate information not only from the direct neighbours of a node but also from the neighbours of the neighbours of a node. The first layer incorporates at each node information about its direct neighbours. Using the output of the first layer, the second layer now has indirect access to the features of the neighbours of the neigbours of a node. Hence, the graph structure is incorporated with a distance of 2 rather than just 1 as was the case when averaging.
+
+\subsubsection{Hidden layer visualisation}
+The activations in the hidden layer of the 2 layer GCN can be visualised using a dimensionality reduction technique. Following the approach taken by Kipf and Welling, I use t-SNE \cite{maaten2008visualizing} to reduce the 16-dimensional hidden activation to 2 dimensions. Figure \ref{fig/gcn_tsne} shows the resulting vectors for the training, validation and test datasets.
+\begin{figure}[h]
+	\includegraphics[width=1.0\textwidth]{gcn/visualisation_tsne}
+	\centering
+	\caption{CAPTION}
+	\label{fig/gcn_tsne}
+\end{figure}
+
+\subsection{Graph Attention Network}
+As for the GCN, I use the hyper-parameters presented by the author but reimplement the network myself in TensorFlow. The regularisation weight is set to $\lambda = 0.0005$ and the dropout rate is set to $p=0.6$. The Adam optimiser \cite{kingma2014adam} is used again with a learning rate of $\textit{lr} = 0.005$. The model is trained over 100 epochs, each with a single batch containing all 2708 nodes.
+
+Using these hyper-parameters I obtain a validation accuracy of 0.77\% and a test accuracy of 0.79\%. This is below the accuracy reported by the authors and I cannot explain as to why those results are different, except if my implementation is not exactly the same as the one proposed in the paper. 
+\begin{figure}[h]
+	\includegraphics[width=1.0\textwidth]{gat/visualisation_tsne}
+	\centering
+	\caption{CAPTION}
+	\label{fig/gcn_tsne}
+\end{figure}
 \section{Conclusion}
 
 \bibliography{bib}

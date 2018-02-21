@@ -85,48 +85,99 @@ optimizer = tf.train.AdamOptimizer(learning_rate=0.01).minimize(loss)
 
 
 with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    sess.run(tf.local_variables_initializer())
-
-    for epoch in range(num_epochs):
-        _, loss_, accuracy_ = sess.run([optimizer, loss, accuracy], 
-                feed_dict = {X: np.array(features.todense()), y:y_train, mask: train_mask, dropout_rate: dropout})
-        if epoch % print_info_every == 0:
-            print("Epoch:{:3d}\tLoss: {:.5f}\tAcc: {:.5f}".format(epoch, loss_, accuracy_))
-
-            val_accuracy_ = sess.run(accuracy, 
-                    feed_dict = {X: np.array(features.todense()), y:y_val, mask: val_mask})
-            print("Validation accuracy: {:.5f}".format(val_accuracy_))
 
 
-    test_accuracy_, predictions_ = sess.run([accuracy, predictions],
-            feed_dict = {X: np.array(features.todense()), y:y_test, mask: test_mask})
-    print("Test accuracy: {:.5f}".format(test_accuracy_))
+    # compute mean accuracy over 10 epochs
+    test_accuracies = []
+    val_accuracies = []
 
-    embeddings = sess.run(Z_0, feed_dict={
+    for i in range(1):
+        sess.run(tf.global_variables_initializer())
+
+        for epoch in range(num_epochs):
+            _, loss_, accuracy_ = sess.run([optimizer, loss, accuracy],
+                    feed_dict = {X: np.array(features.todense()), y:y_train, mask: train_mask, dropout_rate: dropout})
+
+            # if epoch % 1000 == 0:
+            #     print("Epoch:{:3d}\tLoss: {:.5f}\tAcc: {:.5f}".format(epoch, loss_, accuracy_))
+            #
+            #     val_accuracy_ = sess.run(accuracy,
+            #             feed_dict = {X: np.array(features.todense()), y:y_val, mask: val_mask})
+            #     print("Validation accuracy: {:.5f}".format(val_accuracy_))
+
+        val_accuracy_ = sess.run(accuracy, feed_dict={X: np.array(features.todense()), y: y_val, mask: val_mask})
+        print("Val accuracy: {:.5f}".format(val_accuracy_))
+        val_accuracies.append(val_accuracy_)
+
+        test_accuracy_, predictions_ = sess.run([accuracy, predictions],
+                feed_dict = {X: np.array(features.todense()), y:y_test, mask: test_mask})
+        print("Test accuracy: {:.5f}".format(test_accuracy_))
+
+        test_accuracies.append((test_accuracy_))
+
+    print(val_accuracies)
+    print("Average val: {}".format(sum(val_accuracies) / len(val_accuracies)))
+
+    print(test_accuracies)
+    print("Average test: {}".format(sum(test_accuracies)/len(test_accuracies)))
+
+    tsne = TSNE()
+
+    embeddings_ = sess.run(Z_0, feed_dict={
         X: np.array(features.todense()),
         y: y_train,
         mask: train_mask
     })
 
-    print(embeddings.shape)
+    print(embeddings_.shape)
 
-    tsne = TSNE()
-    low_space_X = tsne.fit_transform(embeddings, None)
+    low_space_X = tsne.fit_transform(embeddings_, None)
+    # low_space_X = embeddings_[:, :2]
+    print("Computed reduced dimensionality vectors: {}".format(low_space_X.shape))
 
-    def plot_scatter(mask, y, name):
+
+    def plot_scatter(axes, mask, y, name):
         Xs = low_space_X[mask][:, 0]
         ys = low_space_X[mask][:, 1]
         colors = np.argmax(y[mask], axis=-1)
-        plt.figure()
-        plt.xticks([])
-        plt.yticks([])
-        plt.scatter(Xs, ys, c=colors, linewidths=0.5)
-        plt.title(name)
-        plt.savefig("./figs/gcn/{}_tsne.png".format(name), bbox_inches='tight')
+        axes.set_xticks([])
+        axes.set_yticks([])
+        axes.scatter(Xs, ys, c=colors, linewidths=0.5)
 
-    plot_scatter(train_mask, y_train, "train")
-    plot_scatter(val_mask, y_val, "val")
-    plot_scatter(test_mask, y_test, "test")
+
+    fig = plt.figure(figsize=(16, 4))
+    fig.suptitle("t-SNE visualisation of the hidden layer activations of the GCN")
+
+    ax1 = fig.add_subplot(1, 3, 1)
+    ax1.set_title("Training nodes")
+    plot_scatter(ax1, train_mask, y_train, "train")
+
+    ax2 = fig.add_subplot(1, 3, 2)
+    ax2.set_title("Validation nodes")
+    plot_scatter(ax2, val_mask, y_val, "val")
+
+    ax3 = fig.add_subplot(1, 3, 3)
+    ax3.set_title("Test nodes")
+    plot_scatter(ax3, test_mask, y_test, "test")
+    plt.savefig("./figs/gcn/visualisation_tsne.png", bbox_inches='tight')
     plt.show()
+
+    # tsne = TSNE()
+    # low_space_X = tsne.fit_transform(embeddings, None)
+    #
+    # def plot_scatter(mask, y, name):
+    #     Xs = low_space_X[mask][:, 0]
+    #     ys = low_space_X[mask][:, 1]
+    #     colors = np.argmax(y[mask], axis=-1)
+    #     plt.figure()
+    #     plt.xticks([])
+    #     plt.yticks([])
+    #     plt.scatter(Xs, ys, c=colors, linewidths=0.5)
+    #     plt.title(name)
+    #     plt.savefig("./figs/gcn/{}_tsne.png".format(name), bbox_inches='tight')
+    #
+    # plot_scatter(train_mask, y_train, "train")
+    # plot_scatter(val_mask, y_val, "val")
+    # plot_scatter(test_mask, y_test, "test")
+    # plt.show()
 

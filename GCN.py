@@ -146,7 +146,7 @@ with tf.Session() as sess:
 
 
     fig = plt.figure(figsize=(16, 4))
-    fig.suptitle("t-SNE visualisation of the hidden layer activations of the GCN")
+    # fig.suptitle("t-SNE visualisation of the hidden layer activations of the GCN")
 
     ax1 = fig.add_subplot(1, 3, 1)
     ax1.set_title("Training nodes")

@@ -172,7 +172,7 @@ if __name__ == "__main__":
                 axes.scatter(Xs, ys, c=colors, linewidths=0.5)
 
             fig = plt.figure(figsize=(14, 4))
-            fig.suptitle("t-SNE visualisation of the first layer activations of the GAT")
+            # fig.suptitle("t-SNE visualisation of the first layer activations of the GAT")
 
             ax1 = fig.add_subplot(1,3,1)
             ax1.set_title("Training nodes")

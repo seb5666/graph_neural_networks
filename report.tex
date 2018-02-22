@@ -23,29 +23,29 @@
 \title{{\small{Machine Learning and Algorithms for Data Mining} \\
 Assessment 2\footnote{Word count: 2467 --- Computed using TexCount}} \\
 \textit{Analysis of graph-structured data}}
-\author{Sebastian Borgeaud --- spb61@cam.ac.uk}
+\author{Sebastian Borgeaud dit Avocat}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-	I explore various algorithms for the task of transductive classification on a graph and report their accuracy on the Cora dataset \cite{cora}. First, I present a simple baseline method based on support vector machines that disregards all information of the graph structure. Next, I propose two methods that incorporate the features of neighbouring nodes by averaging over them. As expected, incorporating knowledge about the graph structure gives a significant improvement in classification accuracy, even when incorporated in a simple way. Finally, I reimplement two state-of-the-art methods: Graph Convolutional Networks \cite{kipf2017semi}, and Graph Attention Networks \cite{velickovic2018graph} which achieve the highest accuracy amongst the tested methods.
+	In this report, I explore different algorithms that solve the task of transductive classification on a graph and report their accuracy on the Cora dataset \cite{cora}. First, I present a simple baseline method based on support vector machines that only uses the features available at individual nodes. Next, I propose two methods that incorporate the features of neighbouring nodes by averaging over them. As expected, incorporating knowledge about the graph structure gives a significant improvement in classification accuracy, even when incorporated in a simple way. Finally, I reimplement two state-of-the-art methods: Graph Convolutional Networks \cite{kipf2017semi}, and Graph Attention Networks \cite{velickovic2018graph} which achieve the highest accuracy amongst the tested methods.
 \end{abstract}
 
 \section{Main contributions, Key Concepts and Ideas}
 \subsection{Introduction}
-Many real world datasets occur naturally in the form of graphs, examples from different fields include protein-protein interaction networks in biology \cite{schwikowski2000network}, social networks in sociology \cite{otte2002social}, and scientific collaboration networks \cite{newman2001structure}. I focus on the problem of node classification for citation networks in a transductive setting and present multiple approaches to solve this problem. In the transductive case, as opposed to the inductive case, the entire structure of the network is known at training time but only some of the nodes are labelled. At test time, the task is to to infer labels for the remaining nodes. This differs from supervised learning in two ways. i) The data points (the nodes) are connected to each other. These connections or edges contain further information that might be helpful for classification. ii) The features of the nodes that will be classified at test time are known in advance as the entire graph is known at test time. 
+Many real world datasets occur naturally in the form of graphs: examples from different fields include protein-protein interaction networks in biology \cite{schwikowski2000network}, social networks in sociology \cite{otte2002social}, and scientific collaboration networks \cite{newman2001structure}. I focus on the problem of node classification for citation networks in a transductive setting and present multiple approaches to solve this problem. In the transductive case the entire structure of the network is known at training time but only some of the nodes are labelled. At test time, the task is to to infer the labels of the remaining nodes. This differs from supervised learning in two ways. i) The data points (the nodes) are connected to each other through edges. Using these relations might be helpful for classification. ii) As the entire graph is known at test time, the features of the nodes that will be classified at test time are known in advance. 
 
 \subsection{Related work}
 It is generally possible to distinguish between two categories of approaches for graph-based semi-supervised learning: methods based on an explicit Laplacian regularisation cost and methods based on graph-embedding approaches.
 
 \bigskip
 
-In the first approach, the problem is seen as a graph-based semi-supervised learning problem, where the label information is smoothed over the graph via some form of explicit graph-based regularisation. For example, we could make the assumption that adjacent nodes are more likely to have the same class label and incorporate this in some loss
+In the first approach, the problem is seen as a graph-based semi-supervised learning problem, where the label information is smoothed over the graph via some form of explicit graph-based regularisation. For example, we could make the assumption that adjacent nodes are more likely to have the same class label and incorporate this into the loss
 \begin{equation}
 	\mathcal{L} = \mathcal{L}_0 + \lambda \mathcal{L}_{\mathit{reg}}.
 \end{equation}
-$\mathcal{L}_0$ can be any supervised loss w.r.t to labeled nodes and $\mathcal{L}_{\mathit{reg}}$ is a graph Laplacian regularisation term based on our assumption (e.g.\ that adjacent nodes are more likely to have the same label). Examples of such approaches include the label propagation algorithm (Zhu et.\ al \cite{zhu2002learning}) and manifold regularisation (Belkin et al.\ \cite{belkin2006manifold}).
+$\mathcal{L}_0$ can be any supervised loss w.r.t to labelled nodes and $\mathcal{L}_{\mathit{reg}}$ is a graph Laplacian regularisation term based on our assumption (e.g.\ that adjacent nodes are more likely to have the same label). Examples of such approaches include the label propagation algorithm (Zhu et.\ al \cite{zhu2002learning}) and manifold regularisation (Belkin et al.\ \cite{belkin2006manifold}).
 
 \bigskip
 
@@ -53,26 +53,26 @@ In the second approach, the problem consists of learning embeddings for the node
 
 
 \subsection{Cora Dataset}
-To evaluate the different models I focus on the Cora dataset\footnote{\url{https://linqs.soe.ucsc.edu/data}} \cite{cora}. The dataset consists of $\textrm{N} = 2078$ nodes representing machine learning publications. Each publication is classified into one of $\textrm{C} = 7$ classes: `Case Based', `Genetic Algorithms', `Neural Networks', `Probabilistic Methods', `Reinforcement Learning', `Rule Learning' or `Theory'. The features associated to each node are a binary bag-of-word feature vector for a vocabulary of $\textrm{F} = 1433$ unique words. Let $\mathbf{X}$ be the $\textrm{N} \times \textrm{F}$ matrix containing the features of the nodes in its rows, that is the $i^\textsuperscript{th}$ row  $\mathbf{X}_i$ contains the bag-of-word binary vector for node $i$. The edges are directed and represent citations, where an edge $\mathit{pub_1} \to \mathit{pub_2}$ means that publication $\mathit{pub_2}$ is cited in publication $\mathit{pub_1}$. The papers were selected in such a way that every paper cites or is cited by at least one other paper. 
+To evaluate the different models I focus on the Cora dataset\footnote{\url{https://linqs.soe.ucsc.edu/data}} \cite{cora}. The dataset consists of $\textrm{N} = 2078$ nodes representing machine learning publications. Each publication is classified into one of $\textrm{C} = 7$ classes: `Case Based', `Genetic Algorithms', `Neural Networks', `Probabilistic Methods', `Reinforcement Learning', `Rule Learning' or `Theory'. The features associated to each node are a binary bag-of-word feature vector for a vocabulary of $\textrm{F} = 1433$ unique words. Let $\mathbf{X}$ be the $\textrm{N} \times \textrm{F}$ matrix containing the features of the nodes in its rows. Hence the $i^\textsuperscript{th}$ row of $\mathbf{X}$,  $\mathbf{X}_i$, contains the bag-of-word binary vector for node $i$. The edges are directed and represent citations, where an edge $\mathit{pub_1} \to \mathit{pub_2}$ means that publication $\mathit{pub_2}$ is cited in publication $\mathit{pub_1}$. The papers were selected in such a way that every paper cites or is cited by at least one other paper. 
 
 \bigskip
 
-In particular, I use the data split introduced by Kipf and Welling \cite{kipf2017semi}. At training time the label of only 140 nodes is given (about 6.7\% of the nodes). Let $\mathbf{X}_{L}$ and $\textbf{y}_L$ be the matrices containing respectively the features and the labels of the labeled nodes. A further 500 nodes are split into a validation set and another 1000 nodes make up the test set. Furthermore, the edge orientations are ignored by constructing a symmetric adjacency matrix $\mathbf{A}$, where $\mathbf{A}_{ij} = 1$ if and only if there is an edge between publications $i$ and $j$.
+In particular, I use the data split introduced by Kipf and Welling \cite{kipf2017semi}. At training time the label of only 140 nodes is given (about 6.7\% of the nodes). Let $\mathbf{X}_{L}$ and $\textbf{y}_L$ be the matrices containing respectively the features and the labels of the labelled nodes. A further 500 nodes are split into a validation set and another 1000 nodes make up the test set. Furthermore, the edge orientations are ignored by constructing a symmetric adjacency matrix $\mathbf{A}$, where $\mathbf{A}_{ij} = 1$ if and only if there is an edge between publications $i$ and $j$.
 
 \subsubsection{Node degree distribution}
-The distribution of node degrees is plotted in figures \ref{fig/node_degrees} and \ref{fig/node_degrees_truncated}. Most nodes have few outgoing edges, with 59.9\% of the nodes having 3 outgoing edges or less and over 96.5\% having 10 or fewer. There seems to be one extreme outlier publication making 168 citations, whereas the second most citing paper makes only 78 citations.
+The distribution of node degrees is plotted in figures \ref{fig/node_degrees} and \ref{fig/node_degrees_truncated}. Most nodes have few edges, with 59.9\% of the nodes having 3 edges or less and over 96.5\% having 10 or less. There seems to be one outlier publication with 168 edges, whereas the second most citing paper has only 78 edges.
 
 \begin{figure}[h]
 	\includegraphics[width=1.0\textwidth]{node_degrees}
 	\centering
-	\caption{Distribution of node degrees in Cora dataset}
+	\caption{Distribution of the degree of the nodes in the Cora dataset}
 	\label{fig/node_degrees}
 \end{figure}
 
 \begin{figure}[h]
 	\includegraphics[width=1.0\textwidth]{node_degrees_truncated}
 	\centering
-	\caption{Distribution of node degrees for nodes with degree below 40. This includes 2701 of the 2708 publications, or above 99.7\% of the nodes.}
+	\caption{Distribution of the degrees of the nodes with degree below 40. This includes 2701 of the 2708 publications, or above 99.7\% of the nodes.}
 	\label{fig/node_degrees_truncated}
 \end{figure}
 
@@ -82,12 +82,12 @@ Next, I inspect how densely clustered the network is. TODO
 \section{Methods}
 In this section I present the different methods I implemented to perform the classification task.
 
-\subsection{SVM on node features alone (node SVM)}
+\subsection{SVM on node features (node SVM)}
 The first method provides a simple baseline model and doesn't incorporate any information about the structure of the network. I regard the problem as a standard supervised learning task and train a support vector machine (SVM) on the features of the nodes only. Thus, given the binary bag-of-word vector representation of a publication, the task is to infer its publication type. 
 
 \bigskip
 
-Using scikit-learn\footnote{\url{http://scikit-learn.org/}} \cite{scikit-learn} I train a SVM on the labeled training nodes. The trained model is then used to predict the class labels of the test publications.
+Using scikit-learn\footnote{\url{http://scikit-learn.org/}} \cite{scikit-learn} I train a SVM on the labelled training nodes. The trained model is then used to predict the class labels of the test publications.
 
 \subsection{SVM with neighbour features (average SVM)}
 \label{section/average_svm}
@@ -102,14 +102,14 @@ where
 $\mathcal{N}(i)$ is the set containing the neighbour nodes of node $i$, and $[\cdot \vert\vert \cdot ]$ denotes vector concatenation. Note that $\mathbf{X}'$ is a $\textrm{N} \times 2 \textrm{F}$ matrix and thus contains twice as many entries as $\mathbf{X}$.
 
 \subsection{Multilayer perceptron (average MLP)}
-Next, I train a simple feedforward neural network on the simple concatenation of the node features with the average of the features of the neigbouring nodes. The network consists of two fully-connected layers. The first layer consists of 64 hidden units and has a ReLU activation function. The second layer consists of 7 output units, to which is applied a softmax activation to obtain a probability distribution over the 7 classes. Furthermore, as the number of training data is very small, I make heavy use of regularisation using i) Dropout \cite{srivastava2014dropout} on both the input layer and on the output of the first hidden layer, and ii) L2 regularisation on the weights of the first hidden layer.
+Next, I train a simple multilayer perceptron using the concatenated features $\mathbf{X}'$. The network consists of two fully-connected layers. The first layer consists of 64 hidden units and has a ReLU activation function. The second layer consists of $C=7$ output units, to which is applied the softmax activation to obtain a probability distribution over the 7 classes. Furthermore, as there are only few training nodes, I make heavy use of two regularisation techniques: i) Dropout \cite{srivastava2014dropout} applied to the input layer and to the output of the hidden layer, and ii) L2 regularisation on the weights of the first hidden layer.
 
-\subsection{Graph Convolution Network (GCN)}
-The third algorithm I implemented on this dataset is the Graph Convolution Network, presented by Kipf and Welling \cite{kipf2017semi}. Here, the graph structure is encoded directly using a neural network $f(\mathbf{X}, \mathbf{A})$ where $\mathbf{X}$ is the usual feature matrix and $\mathbf{A}$ is the adjacency matrix. The model is trained on a single supervised loss $\mathcal{L}_0$. However, as the adjacency matrix is also inputed to the network, the gradient information is distributed back from $\mathcal{L}_0$ to all nodes and therefore representations are learnt for nodes with and without labels \cite{kipf2017semi}.
+\subsection{Graph Convolutional Network (GCN)}
+The fourth algorithm I implement is the Graph Convolutional Network, presented by Kipf and Welling \cite{kipf2017semi}. Here, the graph structure is encoded directly using a neural network $f(\mathbf{X}, \mathbf{A})$ where $\mathbf{X}$ is the usual feature matrix and $\mathbf{A}$ is the adjacency matrix. The model is trained on a single supervised loss $\mathcal{L}_0$. However, as the adjacency matrix is also inputed to the network, the gradient information is distributed back from $\mathcal{L}_0$ to all nodes and therefore representations are learnt for nodes with and without labels \cite{kipf2017semi}.
 
 \bigskip
 
-A Graph Convolutional Network (GCN) is a neural network with the following layer-wise propagation rule, where the activations in each layer $H^{(l)}$ are computed as
+A Graph Convolutional Network (GCN) is a neural network with the following layer-wise propagation rule, where the activations in each layer $\mathbf{H}^{(l)}$ are computed as
 \[
 \mathbf{H}^{(l+1)} = \sigma \big( \tilde{\mathbf{D}}^{-\frac{1}{2}} \tilde{\mathbf{A}} \tilde{\mathbf{D}}^{-\frac{1}{2}} \mathbf{H}^{(l)} \mathbf{W}^{(l)}\big)
 \]
@@ -121,7 +121,7 @@ For the Cora dataset, the authors present a 2 layer GCN with a ReLU activation i
 \[
 f(\mathbf{X},\mathbf{A}) = \textrm{softmax}\big(\hat{\mathbf{A}}\ \textrm{ReLU}\big( \hat{\mathbf{A}} X \mathbf{W}^{(0)} \big)\ \mathbf{W}^{(1)} \big)
 \]
-where $\hat{\mathbf{A}} = \tilde{\mathbf{D}}^{-\frac{1}{2}} \tilde{\mathbf{A}} \tilde{\mathbf{D}}^{-\frac{1}{2}}$ and can be precomputed in a pre-processing step. $\mathbf{W}^{(0)}$ is an $\textrm{N} \times \textrm{H}$ weight matrix of reals, where $\textrm{H}$ is the number of nodes in the hidden layer and $\mathbf{W}^{(1)}$ is an $\textrm{H} \times \textrm{C}$ weight matrix, where $\textrm{C} = 7$ is the number of classes. The ReLU activation function just clips the input to 0,
+where $\hat{\mathbf{A}} = \tilde{\mathbf{D}}^{-\frac{1}{2}} \tilde{\mathbf{A}} \tilde{\mathbf{D}}^{-\frac{1}{2}}$ can be precomputed in a pre-processing step. $\mathbf{W}^{(0)}$ is an $\textrm{N} \times \textrm{H}$ weight matrix, where $\textrm{H}$ is the number of nodes in the hidden layer and $\mathbf{W}^{(1)}$ is an $\textrm{H} \times \textrm{C}$ weight matrix, where $\textrm{C} = 7$ is the number of classes. The ReLU activation function just clips the input to 0,
 \[
 \textrm{ReLU}(x) = \max(0, x)
 \]
@@ -134,10 +134,10 @@ During training the cross-entropy loss
 \mathcal{L} = - \sum_{l \in \mathbf{y}_L} \sum_{c=1}^{C} \mathbbm{1}(
 \textbf{y}_{L}^{(l)} = c) \ln f(X,A)_{lc}
 \]
-is minimised over all labeled examples $\textbf{y}_L$ using gradient descent. As the entire dataset fits in memory, a single batch containing the entire network is used. Furthermore, Dropout \cite{srivastava2014dropout} is applied to the input features and to the output of the first layer to reduce overfitting.
+is minimised over all labelled examples $\textbf{y}_L$ using gradient descent. As the entire dataset fits in memory, a single batch containing the entire network is used. Furthermore, Dropout \cite{srivastava2014dropout} is applied to the input features and to the output of the first layer to reduce overfitting.
 
 \subsection{Graph Attention Networks}
-The final method I explore is the Graph Attention Network (GAT) presented by Veli{\v{c}}kovi{\'{c}} et al.\ \cite{velickovic2018graph}. Attention mechanism have become widely popular and have achieved state-of-the-art results in sequence-based tasks, see for example Bahdanau et al.\ (2014) \cite{bahdanau2014neural} or Vaswani et al.\ (2017) \cite{vaswani2017attention} as they have the advantage of giving the neural network the ability to learn on which part of the input to focus. More specifically, in the GAT case we talk about self-attention because the attention mechanism is used to compute a representation of a single sequence. The main idea behind the algorithm is to compute a hidden representation (also called an \textbf{embedding}) for each node in the graph by attending over all its neighbours using self-attention. That is, the network computes an embedding for each node using the nodes in its neighbourhood and by choosing how much attention to pay to each individual neighbour using the self-attention mechanism.
+The final method I explore is the Graph Attention Network (GAT) presented by Veli{\v{c}}kovi{\'{c}} et al.\ \cite{velickovic2018graph}. Attention mechanism have become widely popular and have achieved state-of-the-art results in sequence-based tasks, see for example Bahdanau et al.\ (2014) \cite{bahdanau2014neural} or Vaswani et al.\ (2017) \cite{vaswani2017attention}. Attention mechanisms give a neural network the ability to learn on which part of the input to focus. More specifically, in the GAT case we talk about self-attention because the attention mechanism is used to compute a representation of a single sequence. The main idea behind the algorithm is to compute a hidden representation (also called an \textbf{embedding}) for each node in the graph by attending over all its neighbours using self-attention. That is, the network computes an embedding for each node using the nodes in its neighbourhood and by choosing how much attention to pay to each individual neighbour using the self-attention mechanism.
 
 \bigskip
 
@@ -146,7 +146,7 @@ The GAT architecture is best described in terms of its layers, called \textbf{gr
 e_{ij} = a(\mathbf{h}'_i, \mathbf{h}'_j) = a(\mathbf{h}_i \textbf{W}, \mathbf{h}_j \textbf{W})
 \]
 
-Intuitively, $e_{ij}$ indicates how important the features of node $j$ are to node $i$. To inject graph structural information, we only attend over the some neighbourhood $\mathcal{N}(i)$ for a given node $i$, defined to be the direct neighbours of $i$, including $i$ itself. Hence, we have that
+Intuitively, $e_{ij}$ indicates how important the features of node $j$ are to node $i$. To inject graph structural information, we only attend over some neighbourhood $\mathcal{N}(i)$ for a given node $i$, defined to be the direct neighbours of $i$, including $i$ itself. Hence, we have that
 \begin{equation*}
 e_{ij} = \begin{cases}
 				a(\mathbf{h}_i \textbf{W}, \mathbf{h}_j \textbf{W}) &\text{if $A_{ij} = 1$ or $i = j$}\\
@@ -159,7 +159,9 @@ Then, the coefficients are normalised using the softmax function:
 \]
 We can do this for every pair of nodes $i$ and $j$ to obtain an $\textrm{N} \times \textrm{N}$ matrix $\alpha_{ij}$ of attention coefficients.
 
-Here, the attention mechanism is defined to be a single-layer neural network, parametrised by weights $\textbf{a}$ and using a LeakyReLU activation: 
+\bigskip
+
+The attention mechanism is defined to be a single-layer neural network, parametrised by weights $\textbf{a}$ and using a LeakyReLU activation: 
 \[
 \textrm{LeakyReLU}_{\alpha}(x) = 
 	\begin{cases}
@@ -201,8 +203,7 @@ The second layer has $C$ features and a single activation head $K_a=1$. The nonl
 To cope with the small training set and avoid overfitting L2 regularisation is applied to the layer weights and Dropout \cite{srivastava2014dropout} is applied to the layers' inputs and to the attention coefficients. Thus at each training epoch, a node is only exposed to a sample of its neighbourhood. 
 
 \section{Results \& analysis}
-Th results obtained with the various methods described above are shown in table \ref{table/all_results}. Next, I explain the optimisation of hyper-parameters and implementation details for each of the methods presented in more detail.
-
+The results obtained with the various methods described above are shown in table \ref{table/all_results}.
 \begin{table}[h]
 \centering	
 {\renewcommand{\arraystretch}{1.4} %<- modify value to suit your needs
@@ -228,12 +229,14 @@ GAT & 0.769 & 0.794 \\
 \label{table/all_results}
 \end{table}
 
+Next, I go through the implementation details for each of the methods presented  and explain how the hyper-parameters are optimised.
+
 \subsection{SVM on node features}
 Using the 500 validation nodes I optimise the hyper-parameters of the SVM by using a grid-search approach over a range of parameters. I consider both linear and a radial basis function (RBF) kernels. For the linear kernel, the only hyper-parameter, $C$, is taken at regular intervals on a logarithmic scale ranging from $2^{-15}$ to $2^3$. For the RBF kernel, $C$ is similarly taken from a logarithmic scale ranging from $2^{-15}$ to $2^5$. The second hyper-parameter, $\gamma$, is taken from the range $2^{-15}$ to $2^3$. The validation accuracy obtained for these hyper-parameters ranges are presented in figures \ref{fig/node_svm_linear_reg} and \ref{fig/node_svm_rbf_reg}. The validation accuracy is maximised at 56.6\%, obtained with the RBF kernel, $C=1.86$ and $\gamma=2^{-7}$. 
 
 \bigskip
 
-Although well below the current state-of-the-art accuracy, this provides a simple baseline accuracy on the test nodes of 57.6\%. This is significantly better than a random baseline, which would have an expected accuracy of $\frac{1}{7}$ or about 14.3\%. This suggests that, rather unsurprisingly, a lot of the information required for classification is contained in the nodes features, that is in the bag-of-word vectors. 
+Although significantly below the current state-of-the-art accuracy, this provides a simple baseline accuracy on the test nodes of 57.6\%. This is significantly better than a random baseline, which would have an expected accuracy of $\frac{1}{7}$ or about 14.3\%. This suggests that, rather unsurprisingly, a lot of the information required for classification is contained in the nodes features, i.e.\ the bag-of-word vectors. 
 
 \begin{figure}[h]
 	\includegraphics[width=1.0\textwidth]{node_svm/linear_reg}
@@ -249,7 +252,7 @@ Although well below the current state-of-the-art accuracy, this provides a simpl
 \end{figure}
 
 \subsection{Average features SVM}
-Using these new features $\mathbf{X}'$ as presented in section \ref{section/average_svm}, I train a SVM as before using the scikit-learn library. I consider both linear and a RBF kernels. The validation accuracies are presented in figures \ref{fig/average_svm_linear_reg} and \ref{fig/average_svm_rbf_reg}. Again, the RBF kernel performs slightly better with a validation accuracy of 71.6\% compared to 71.4\% for the linear kernel. Using the best hyper-parameters with the RBF kernel: $C=5.411$ and $\gamma = 2^{-9}$, I obtain an accuracy of 73.3\% on the test nodes.
+I train the second SVM this time using the concatenated features $\mathbf{X}'$. I consider both linear and a RBF kernels. The validation accuracies are presented in figures \ref{fig/average_svm_linear_reg} and \ref{fig/average_svm_rbf_reg}. Again, the RBF kernel performs slightly better with a validation accuracy of 71.6\% compared to 71.4\% for the linear kernel. Using the best hyper-parameters with the RBF kernel: $C=5.411$ and $\gamma = 2^{-9}$, I obtain an accuracy of 73.3\% on the test nodes.
 
 \begin{figure}[h]
 	\includegraphics[width=1.0\textwidth]{average_svm/linear_reg}
@@ -266,34 +269,34 @@ Using these new features $\mathbf{X}'$ as presented in section \ref{section/aver
 
 This is a significant improvement over the accuracy obtain with the SVM trained on the features of each node individually. This shows that incorporating knowledge about the graph structure does indeed improve the classification accuracy significantly even when incorporated only in a very simplistic way, i.e.\ by only considering the direct neighbours and averaging their features.
 
-\subsection{Feedforward neural network with neighbour features}
-To find the optimal hyper-parameters, I again use a grid search method, validating the accuracy using the 500 validation nodes. The network is trained using every possible combination of parameters with $\textrm{batch\_size} \in [32, 64, 128, 256, 2708]$, $\textrm{num\_epochs} \in  [50, 100, 200, 400]$, $\textrm{dropout\_p} \in  [0.0, 0.1, 0.2, 0.4, 0.6]$ and $\lambda \in  [0.05, 0.005, 0.001, 0.0001]$ where $\lambda$ is the l2 regularisation weight. The best validation accuracy of 76.2\% was obtained using a batch size of 2708, i.e.\ using the entire training set, training over 400 epochs with a dropout rate of 0.6 and setting $\lambda = 0.0001$. Using these hyper-parameters I obtain a test accuracy of 76.9\%.
+\subsection{Multilayer perceptron}
+To find the optimal hyper-parameters, I again use a grid search method, validating the accuracy using the 500 validation nodes. The network is trained using every possible combination of parameters with \texttt{batch\_size} in [32, 64, 128, 256, 2708], \texttt{num\_epochs} in  [50, 100, 200, 400], \texttt{dropout\_p} in  [0.0, 0.1, 0.2, 0.4, 0.6] and $\lambda$ in  [0.05, 0.005, 0.001, 0.0001] where $\lambda$ is the L2 regularisation weight. The best validation accuracy of 76.2\% was obtained using a batch size of 2708, i.e.\ using the entire training set, training over 400 epochs with a dropout rate of 0.6 and setting $\lambda = 0.0001$. Using these hyper-parameters I obtain a test accuracy of 76.9\%.
 
 \bigskip
 
-Say something about this being higher than the SVM...
+The multilayer perceptron therefore performs better than the SVM trained on the same input features. This could be explained by the higher complexity of the MLP compared to the SVM.
 
-\subsection{Graph Convolution Network}
+\subsection{Graph Convolutional Network}
 
-I implemented the GCN model in TensorFlow and used the hyper-parameters presented by the authors which were obtained by optimising the validation accuracy on the set of 500 validation nodes. The model is trained over 200 epochs using the Adam optimiser \cite{kingma2014adam}. The optimal learning rate was found to be 0.01. The weights are initialised using a Glorot initialization \cite{glorot2010understanding}. Furthermore, the input feature vectors are row-normalized. The dropout rate was set to $p=0.5$, the L2 regularisation weight to $\lambda=0.0005$. The number of hidden inputs was set to 16. Averaging the result of 10 runs, I obtain an accuracy of 78.5\% on the validation data and 80.3\% on the test data.
+I implement the GCN model using TensorFlow. I use the hyper-parameters presented by the authors which were obtained by optimising the validation accuracy on the set of 500 validation nodes. The model is trained over 200 epochs using the Adam optimiser \cite{kingma2014adam}. The optimal learning rate was found to be 0.01. The weights are initialised using a Glorot initialization \cite{glorot2010understanding}. Furthermore, the input feature vectors are row-normalized. The dropout rate was set to $p=0.5$, the L2 regularisation weight to $\lambda=0.0005$. The number of hidden inputs was set to 16. Averaging the result of 10 runs, I obtain an accuracy of 78.5\% on the validation data and 80.3\% on the test data.
 
 \bigskip
 
-The GCN is a significant improvement over the average MLP. This could be accounted for by multiple reasons. First, the graph structure is incorporated in a more principled way, using the adjacency matrix and the degree matrix of the network. Second, as the network consists of two layers, it has the ability to incorporate information not only from the direct neighbours of a node but also from the neighbours of the neighbours of a node.
+The GCN is a significant improvement over the MLP. This could be accounted for by multiple reasons. First, the graph structure is incorporated in a more principled way, using the adjacency matrix and the degree matrix of the network. Second, as the network consists of two layers, it has the ability to incorporate information not only from the direct neighbours of a node but also from the neighbours of the neighbours of a node.
 
 \subsubsection{Hidden layer visualisation}
 
-The activations in the hidden layer of the 2 layer GCN can be visualised using a dimensionality reduction technique. Following the approach taken by Kipf and Welling, I use t-SNE \cite{maaten2008visualizing} to reduce the 16-dimensional hidden activation to 2 dimensions. Figure \ref{fig/gcn_tsne} shows the resulting vectors for the training, validation and test datasets.
+The activations in the hidden layer of the GCN can be visualised using a dimensionality reduction technique. Following the approach taken by Kipf and Welling, I use t-SNE \cite{maaten2008visualizing} to reduce the 16-dimensional hidden activation to 2 dimensions. Figure \ref{fig/gcn_tsne} shows the resulting vectors for the training, validation and test datasets.
 
 \begin{figure}[h]
 	\includegraphics[width=1.0\textwidth]{gcn/visualisation_tsne}
 	\centering
-	\caption{Activations in the hidden layer, after reducing their dimensionality using t-SNE for the training, validation and test nodes. As expected, the network is able to learn to discern the training examples well.}
+	\caption{Activations in the hidden layer, after reducing their dimensionality using t-SNE for the training, validation and test nodes. As expected, the network is able to learn to discern the training examples well. Different colours represent the different classes.}
 	\label{fig/gcn_tsne}
 \end{figure}
 
 \subsection{Graph Attention Network}
-As for the GCN, I use the hyper-parameters presented by the author but reimplement the network in TensorFlow. The regularisation weight is set to $\lambda = 0.0005$ and the dropout rate is set to $p=0.6$. The Adam optimiser \cite{kingma2014adam} is usedd with a learning rate of $\textit{lr} = 0.005$. The model is trained over 100 epochs, each with a single batch containing all 2708 nodes.
+Similarly as for the GCN, I use the hyper-parameters presented by the author but reimplement the network in TensorFlow. The regularisation weight is set to $\lambda = 0.0005$ and the dropout rate is set to $p=0.6$. The Adam optimiser \cite{kingma2014adam} is used with a learning rate of $\textit{lr} = 0.005$. The model is trained over 100 epochs, each with a single batch containing all 2708 nodes.
 
 Using these hyper-parameters I obtain a validation accuracy of 0.77\% and a test accuracy of 0.79\%. This is less the accuracy reported by the authors (83.0\%). This discrepancy might be explained by small differences between the two implementations of the algorithm. 
 
@@ -302,12 +305,12 @@ Using t-SNE we can reduce the dimensionality of the learnt embeddings, i.e.\ the
 \begin{figure}[h]
 	\includegraphics[width=1.0\textwidth]{gat/visualisation_tsne}
 	\centering
-	\caption{Visualisation of the learnt embeddings by the GAT. The dimensionality of the embeddings is reduced from 64 to 2 using t-SNE. The embeddings are shown for the training, validation and test nodes. As expected, the network is able to learn to discern the training examples well.}
+	\caption{Visualisation of the learnt embeddings by the GAT. The dimensionality of the embeddings is reduced from 64 to 2 using t-SNE. The embeddings are shown for the training, validation and test nodes. As expected, the network is able to learn to discern the training examples well. Different colours represent the different classes.}
 	\label{fig/gat_tsne}
 \end{figure}
 
 \section{Conclusion}
-	I implemented 5 different approaches to solve the task of transductive classification on the Cora dataset \cite{cora}. Experiments show that a simple baseline method using the node features alone is sufficient to obtain significantly better than random accuracy. Furthermore, incorporating more information about the graph structure did increase the accuracy significantly. My implementation of the more sophisticated approaches, i.e.\ the GCN and the GAT obtained the best results, closely matching the current state-of-the-art results for this dataset.	
+	I implemented 5 different approaches to solve the task of transductive classification on the Cora dataset \cite{cora}. Experiments show that a simple baseline method using the node features alone is sufficient to obtain significantly better results than using a random baseline. Using information given by the graph structure by concatenating the average of the neighbouring node features to the features of a node itself did increase the accuracy significantly. My implementation of the more sophisticated approaches, i.e.\ the GCN and the GAT obtained the best results, closely matching the current state-of-the-art results for this dataset.	
 \bibliography{bib}
 \bibliographystyle{unsrt}
 

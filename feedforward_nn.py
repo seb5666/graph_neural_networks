@@ -5,6 +5,9 @@ from keras.layers import Input, Dense, Dropout
 from keras.models import Model
 from keras.regularizers import l2
 
+from matplotlib import pyplot as plt
+plt.style.use('ggplot')
+
 adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data('cora')
 
 num_nodes = adj.shape[0]
@@ -63,57 +66,58 @@ X_test = merged_features[test_mask]
 y_test = y_test[test_mask]
 
 
-batch_sizes = [32, 64, 128, 256, num_nodes]
-num_epochs = [50, 100, 200, 400]
-ps = [0.0, 0.1, 0.2, 0.4, 0.6]
-reg_weights = [0.05, 0.005, 0.001, 0.0001]
+batch_size = num_nodes
+num_epoch = 400
+p = 0.6
+reg_weight = 0.0001
 
-
-best_params = None
-best_val_acc = 0
-best_test_acc = 0
-
-for batch_size in batch_sizes:
-    for num_epoch in num_epochs:
-        for p in ps:
-            for reg_weight in reg_weights:
-                print("Batch size: {}\t num_epochs: {}\t p: {}\t reg_weight: {}".format(batch_size, num_epoch, p, reg_weight))
-
-                inputs = Input(shape=(2*num_features, ))
-                inputs_dropped = Dropout(p)(inputs)
-                x1 = Dense(16, activation='relu', kernel_regularizer=l2(reg_weight))(inputs_dropped)
-                x1_dropped = Dropout(p)(x1)
-                # x2 = Dense(32, activation='relu', kernel_regularizer=l2(reg_weight))(x1_dropped)
-                # x2_dropped = Dropout(p)(x2)
-                predictions = Dense(num_classes, activation='softmax')(x1_dropped)
-
-                model = Model(inputs=inputs, outputs=predictions)
-                model.compile(optimizer='adam',
-                              loss='categorical_crossentropy',
-                              metrics=['accuracy'])
-
-                model.fit(x=X_train, y=y_train,
-                          batch_size=batch_size,
-                          epochs=num_epoch,
-                          verbose=0
-                          )
-
-                val_probs = model.predict(X_val, batch_size=batch_size)
-                test_probs = model.predict(X_test, batch_size=batch_size)
-
-                val_acc = accuracy(val_probs, y_val)
-                test_acc = accuracy(test_probs, y_test)
-                print("Val accuracy: {}\t Test accuracy: {}".format(val_acc, test_acc))
-
-                if val_acc > best_val_acc:
-                    best_val_acc = val_acc
-                    best_test_acc = test_acc
-                    best_params = (batch_size, num_epoch, p, reg_weight)
-
-print()
-print("OPTIMAL PARAMS:")
 print("Batch size: {}\t num_epochs: {}\t p: {}\t reg_weight: {}".format(batch_size, num_epoch, p, reg_weight))
-print("Val acc: {}".format(best_val_acc))
-print("Test acc: {}".format(best_test_acc))
+
+inputs = Input(shape=(2*num_features, ))
+inputs_dropped = Dropout(p)(inputs)
+x1 = Dense(64, activation='relu', kernel_regularizer=l2(reg_weight))(inputs_dropped)
+x1_dropped = Dropout(p)(x1)
+# x2 = Dense(32, activation='relu', kernel_regularizer=l2(reg_weight))(x1_dropped)
+# x2_dropped = Dropout(p)(x2)
+predictions = Dense(num_classes, activation='softmax')(x1_dropped)
+
+model = Model(inputs=inputs, outputs=predictions)
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+history = model.fit(x=X_train, y=y_train,
+              validation_data=(X_val, y_val),
+              batch_size=batch_size,
+              epochs=num_epoch,
+              verbose=0
+              )
+
+print(history.history.keys())
+
+plt.figure()
+plt.plot(np.arange(1, num_epoch + 1), history.history['acc'], label="Test accuracy")
+plt.plot(np.arange(1, num_epoch + 1), history.history['val_acc'], label="Train accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend(loc="lower right")
+# plt.title("Accuracy during training")
+plt.savefig("figs/mlp/acc.png", bbox_inches='tight')
+
+plt.figure()
+plt.plot(np.arange(1, num_epoch + 1), history.history['loss'], label="Training loss")
+plt.plot(np.arange(1, num_epoch + 1), history.history['val_loss'], label="Validation loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(loc="upper right")
+# plt.title("Loss during training")
+plt.savefig("figs/mlp/loss.png", bbox_inches='tight')
+plt.show()
+val_probs = model.predict(X_val, batch_size=batch_size)
+test_probs = model.predict(X_test, batch_size=batch_size)
+
+val_acc = accuracy(val_probs, y_val)
+test_acc = accuracy(test_probs, y_test)
+print("Val accuracy: {}\t Test accuracy: {}".format(val_acc, test_acc))
 
 
